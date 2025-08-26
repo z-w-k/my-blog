@@ -1,35 +1,55 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect, useState } from 'react';
+import { Breadcrumb, Layout, Pagination } from 'antd';
+import PersonalIcon from './assets/icons/PersonalIcon';
+import useSystemStore from './stores/system-store';
+import type { BlogItem } from './api/blog-api';
 
-function App() {
-  const [count, setCount] = useState(0)
+const { Header, Content, Footer } = Layout;
+
+const App: React.FC = () => {
+  
+  const {useApifoxData,apiUrl,baseUrl,envName} = useSystemStore()
+
+  console.log(useApifoxData,apiUrl,baseUrl,envName)
+  const [blogList,setBlogList] = useState([])
+
+  useEffect(()=>{
+    if(useApifoxData){
+      setBlogList([])
+    }
+  },[useApifoxData])
+
+
+  const BlogListComponent = ()=>(
+    blogList.map((item:BlogItem)=>(
+      <div key={item.id}>
+        <h1>{item.title}</h1>
+        <p>{item.content}</p>
+      </div>
+    ))
+  )
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <Layout className='w-full h-full'>
+      <Header style={{ display: 'flex', alignItems: 'center' }} className=' justify-between'>
+        <div className="demo-logo text-white" >logo</div>
+        <PersonalIcon width='2rem' height='2rem' fill='#fff' />
+      </Header>
+      <Content style={{ padding: '0 48px' }} className='flex flex-col '>
+        <Breadcrumb
+          style={{ margin: '16px 0' }}
+          items={[{ title: 'Home' }, { title: 'List' }, { title: 'App' }]}
+        />
+        <div className='flex-1'>
+          <BlogListComponent />
+        </div>
+        <Pagination defaultCurrent={6} total={500} align='center' />
+      </Content>
+      <Footer style={{ textAlign: 'center' }}>
+        Ant Design ©{new Date().getFullYear()} Created by Ant UED
+      </Footer>
+    </Layout>
+  );
+};
 
-export default App
+export default App;
