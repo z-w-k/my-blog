@@ -1,3 +1,4 @@
+import { apiClient } from "@/utils/apiClient";
 
 export interface BlogItem {
   author: string;
@@ -11,4 +12,15 @@ export interface BlogItem {
   updateTime: string;
 }
 
+type Response<T> = {
+  data: T;
+}
 
+interface BlogListResponse {
+  blogList: BlogItem[];
+}
+export const blogApi = {
+  getPublicBlogList: async () => {
+    return apiClient.get<Response<BlogListResponse>>('/getPublicBlogList')
+  }
+}

@@ -1,27 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Breadcrumb, Layout, Pagination } from 'antd';
 import PersonalIcon from './assets/icons/PersonalIcon';
 import useSystemStore from './stores/system-store';
-import type { BlogItem } from './api/blog-api';
+import { blogApi, type BlogItem } from './api/blog-api';
+import { useAsyncEffect } from './hooks/effect';
 
 const { Header, Content, Footer } = Layout;
 
 const App: React.FC = () => {
-  
-  const {useApifoxData,apiUrl,baseUrl,envName} = useSystemStore()
 
-  console.log(useApifoxData,apiUrl,baseUrl,envName)
-  const [blogList,setBlogList] = useState([])
+  const { useApifoxData, apiUrl, baseUrl, envName } = useSystemStore()
 
-  useEffect(()=>{
-    if(useApifoxData){
-      setBlogList([])
+  console.log(useApifoxData, apiUrl, baseUrl, envName)
+  const [blogList, setBlogList] = useState<BlogItem[]>([])
+
+  useAsyncEffect(async () => {
+    if (useApifoxData) {
+      const res = await blogApi.getPublicBlogList()
+      console.log('res',res)
+      setBlogList(res.data.blogList)
     }
-  },[useApifoxData])
+  }, [])
 
 
-  const BlogListComponent = ()=>(
-    blogList.map((item:BlogItem)=>(
+  const BlogListComponent = () => (
+    blogList.map((item: BlogItem) => (
       <div key={item.id}>
         <h1>{item.title}</h1>
         <p>{item.content}</p>
