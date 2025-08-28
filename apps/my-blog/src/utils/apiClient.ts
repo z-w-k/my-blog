@@ -1,18 +1,34 @@
+// types.ts
+interface Response<T = unknown> {
+  code: number;
+  message: string;
+  data: T;
+  success: boolean;
+}
+
+export interface RequestConfig {
+  headers?: Record<string, string>;
+  timeout?: number;
+  [key: string]: unknown;
+}
+
+export interface Interceptor<T> {
+  onFulfilled?: (value: T) => T | Promise<T>;
+  onRejected?: (error: unknown) => unknown;
+}
+
+// apiClient.ts
 class ApiClient {
   private static instance: ApiClient;
   private baseURL: string;
-  private defaultOptions: RequestInit;
+  private requestInterceptors: Array<Interceptor<RequestInit>> = [];
+  private responseInterceptors: Array<Interceptor<Response>> = [];
 
   private constructor() {
     this.baseURL = import.meta.env.VITE_USE_APIFOX_DATA ? import.meta.env.VITE_APIFOX_API_URL : import.meta.env.VITE_API_URL;
-    this.defaultOptions = {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    };
   }
 
-  // 获取单例实例
+  // 单例获取方法
   public static getInstance(): ApiClient {
     if (!ApiClient.instance) {
       ApiClient.instance = new ApiClient();
@@ -20,76 +36,189 @@ class ApiClient {
     return ApiClient.instance;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-    const mergedOptions: RequestInit = {
-      ...this.defaultOptions,
-      ...options,
-      headers: {
-        ...this.defaultOptions.headers,
-        ...options.headers,
-      },
-    };
+  // 设置基础 URL
+  public setBaseURL(url: string): void {
+    this.baseURL = url;
+  }
 
+  // 添加请求拦截器
+  public addRequestInterceptor(interceptor: Interceptor<RequestInit>): number {
+    return this.requestInterceptors.push(interceptor);
+  }
+
+  // 添加响应拦截器
+  public addResponseInterceptor(interceptor: Interceptor<Response>): number {
+    return this.responseInterceptors.push(interceptor);
+  }
+
+  // 移除请求拦截器
+  public removeRequestInterceptor(id: number): void {
+    this.requestInterceptors.splice(id - 1, 1);
+  }
+
+  // 移除响应拦截器
+  public removeResponseInterceptor(id: number): void {
+    this.responseInterceptors.splice(id - 1, 1);
+  }
+
+  // 执行拦截器链
+  private async executeInterceptors<T>(
+    interceptors: Array<Interceptor<T>>,
+    value: T
+  ): Promise<T> {
+    let result = value;
+    for (const interceptor of interceptors) {
+      if (interceptor.onFulfilled) {
+        result = await interceptor.onFulfilled(result);
+      }
+    }
+    return result;
+  }
+
+  // 核心请求方法
+  private async coreRequest<TParams, TQuery, TBody, TResponse>(config: {
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    url: string;
+    params?: TParams;
+    query?: TQuery;
+    body?: TBody;
+    options?: RequestConfig;
+  }): Promise<Response<TResponse>> {
     try {
-      const response = await fetch(url, mergedOptions);
-      
+      // 处理路径参数
+      let finalUrl = this.baseURL + config.url;
+      if (config.params) {
+        const entries = Object.entries(config.params as Record<string, string>)
+
+        const reduceRes = entries.reduce(
+          (url, [key, value]) => url.replace(`:${key}`, encodeURIComponent(value)),
+          finalUrl
+        )
+        finalUrl = reduceRes;
+      }
+
+      // 处理查询参数
+      if (config.query) {
+        const queryParams = new URLSearchParams(config.query as Record<string, string>).toString();
+        finalUrl = `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}${queryParams}`;
+      }
+
+      // 准备请求配置
+      let requestConfig: RequestInit = {
+        method: config.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...config.options?.headers,
+        },
+      };
+
+      // 添加请求体（非 GET 请求）
+      if (config.method !== 'GET' && config.body) {
+        requestConfig = {
+          ...requestConfig,
+          body: JSON.stringify(config.body),
+        };
+      }
+
+      // 执行请求拦截器
+      requestConfig = await this.executeInterceptors(this.requestInterceptors, requestConfig);
+
+      // 设置超时
+      const timeout = config.options?.timeout || 10000;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      requestConfig.signal = controller.signal;
+
+      // 发送请求
+      const response = await fetch(finalUrl, requestConfig);
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        return response.json() as Promise<T>;
-      }
-      return response.text() as unknown as Promise<T>;
+      // 解析响应
+      let responseData: Response<TResponse> = await response.json();
+
+      // 执行响应拦截器
+      responseData = await this.executeInterceptors<Response<TResponse>>(this.responseInterceptors as Array<Interceptor<Response<TResponse>>>, responseData);
+
+      return responseData;
+
     } catch (error) {
       console.error('API Request failed:', error);
       throw error;
     }
   }
 
-  public get<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: 'GET' });
-  }
-
-  public post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  public put<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  public delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
-  }
-
-  // 设置认证token
-  public setAuthToken(token: string): void {
-    this.defaultOptions.headers = {
-      ...this.defaultOptions.headers,
-      'Authorization': `Bearer ${token}`,
+  // GET 工厂方法
+  public createGetApi<TParams = void, TQuery = void, TResponse = unknown>(url: string) {
+    return (options?: {
+      params?: TParams;
+      query?: TQuery;
+      config?: RequestConfig;
+    }): Promise<Response<TResponse>> => {
+      return this.coreRequest<TParams, TQuery, void, TResponse>({
+        method: 'GET',
+        url,
+        params: options?.params,
+        query: options?.query,
+        options: options?.config,
+      });
     };
   }
 
-  // 清除认证token
-  public clearAuthToken(): void {
-    // const { Authorization, ...headers } = this.defaultOptions.headers;
-    // this.defaultOptions.headers = headers;
+  // POST 工厂方法
+  public createPostApi<TParams = void, TBody = void, TResponse = unknown>(url: string) {
+    return (options?: {
+      params?: TParams;
+      body?: TBody;
+      config?: RequestConfig;
+    }): Promise<Response<TResponse>> => {
+      return this.coreRequest<TParams, void, TBody, TResponse>({
+        method: 'POST',
+        url,
+        params: options?.params,
+        body: options?.body,
+        options: options?.config,
+      });
+    };
+  }
+
+  // PUT 工厂方法
+  public createPutApi<TParams = void, TBody = void, TResponse = unknown>(url: string) {
+    return (options?: {
+      params?: TParams;
+      body?: TBody;
+      config?: RequestConfig;
+    }): Promise<Response<TResponse>> => {
+      return this.coreRequest<TParams, void, TBody, TResponse>({
+        method: 'PUT',
+        url,
+        params: options?.params,
+        body: options?.body,
+        options: options?.config,
+      });
+    };
+  }
+
+  // DELETE 工厂方法
+  public createDeleteApi<TParams = void, TResponse = unknown>(url: string) {
+    return (options?: {
+      params?: TParams;
+      config?: RequestConfig;
+    }): Promise<Response<TResponse>> => {
+      return this.coreRequest<TParams, void, void, TResponse>({
+        method: 'DELETE',
+        url,
+        params: options?.params,
+        options: options?.config,
+      });
+    };
   }
 }
 
-// 导出单例实例
-export const apiClient = ApiClient.getInstance();
+// 导出单例
+export const apiClientIns = ApiClient.getInstance();
+
+export default ApiClient;

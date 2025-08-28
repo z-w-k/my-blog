@@ -1,52 +1,28 @@
-import React, { useState } from 'react';
-import { Breadcrumb, Layout, Pagination } from 'antd';
+import React from 'react';
+import { Breadcrumb, Layout } from 'antd';
 import PersonalIcon from './assets/icons/PersonalIcon';
-import useSystemStore from './stores/system-store';
-import { blogApi, type BlogItem } from './api/blog-api';
-import { useAsyncEffect } from './hooks/effect';
+
+import { Link, Outlet } from 'react-router';
 
 const { Header, Content, Footer } = Layout;
 
 const App: React.FC = () => {
-
-  const { useApifoxData, apiUrl, baseUrl, envName } = useSystemStore()
-
-  console.log(useApifoxData, apiUrl, baseUrl, envName)
-  const [blogList, setBlogList] = useState<BlogItem[]>([])
-
-  useAsyncEffect(async () => {
-    if (useApifoxData) {
-      const res = await blogApi.getPublicBlogList()
-      console.log('res',res)
-      setBlogList(res.data.blogList)
-    }
-  }, [])
-
-
-  const BlogListComponent = () => (
-    blogList.map((item: BlogItem) => (
-      <div key={item.id}>
-        <h1>{item.title}</h1>
-        <p>{item.content}</p>
-      </div>
-    ))
-  )
-
   return (
     <Layout className='w-full h-full'>
       <Header style={{ display: 'flex', alignItems: 'center' }} className=' justify-between'>
-        <div className="demo-logo text-white" >logo</div>
+        <Link to='/' className="demo-logo text-white" >logo</Link>
+        <Link to='/blog/create' className='text-white cursor-pointer'>create blog</Link>
         <PersonalIcon width='2rem' height='2rem' fill='#fff' />
+        
       </Header>
       <Content style={{ padding: '0 48px' }} className='flex flex-col '>
         <Breadcrumb
           style={{ margin: '16px 0' }}
           items={[{ title: 'Home' }, { title: 'List' }, { title: 'App' }]}
         />
-        <div className='flex-1'>
-          <BlogListComponent />
+        <div className='flex-1 p-4 bg-white'>
+          <Outlet />
         </div>
-        <Pagination defaultCurrent={6} total={500} align='center' />
       </Content>
       <Footer style={{ textAlign: 'center' }}>
         Ant Design ©{new Date().getFullYear()} Created by Ant UED

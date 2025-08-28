@@ -1,26 +1,47 @@
-import { apiClient } from "@/utils/apiClient";
+import { apiClientIns } from "@/utils/apiClient";
 
 export interface BlogItem {
-  author: string;
+  blogId: number;
+  authorName: string;
   category: string;
-  content: string;
-  createTime: string;
-  id: number;
   isRecommend: boolean;
   tags: string[];
   title: string;
+  authorAvatar: string;
+  description: string;
+  headerImage: string;
+  authorId: number;
   updateTime: string;
+  createTime: string;
 }
 
-type Response<T> = {
-  data: T;
+export interface BlogDetail extends BlogItem {
+  content: string;
 }
 
+
+
+interface BlogListReq {
+  pageNum?: number;
+  pageSize?: number;
+  search?: string;
+}
 interface BlogListResponse {
   blogList: BlogItem[];
+  total: number;
+  pageNum: number;
+  pageSize: number;
+}
+
+export interface CreateBlogReq {
+  authorName: string;
+  content: string;
+  description: string;
+  title: string;
 }
 export const blogApi = {
-  getPublicBlogList: async () => {
-    return apiClient.get<Response<BlogListResponse>>('/getPublicBlogList')
-  }
+  getBlogList: apiClientIns.createGetApi<void, BlogListReq, BlogListResponse>('/blog/list'),
+  getBlogDetail: apiClientIns.createGetApi<void, { blogId: number }, BlogDetail>('/blog/detail'),
+  createBlog: apiClientIns.createPostApi<void, CreateBlogReq, { blogId: number}>('/blog/create'),
+  deleteBlog: apiClientIns.createDeleteApi<{ blogId: number }, void>('/blog/delete/:blogId'),
 }
