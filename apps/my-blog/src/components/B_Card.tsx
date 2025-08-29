@@ -2,11 +2,13 @@ import React from 'react';
 import { DeleteOutlined, EditOutlined, EllipsisOutlined, SettingOutlined } from '@ant-design/icons';
 import { Avatar, Card } from 'antd';
 import { blogApi, type BlogItem } from '@/api/blog-api';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 const { Meta } = Card;
 
-const App: React.FC<BlogItem> = (props) => (
+const App: React.FC<BlogItem> = (props) => {
+  const navigate = useNavigate()
+  return (
   <Card
     style={{ width: 300 }}
     cover={
@@ -18,7 +20,9 @@ const App: React.FC<BlogItem> = (props) => (
     hoverable
     actions={[
       <SettingOutlined key="setting" />,
-      <EditOutlined key="edit" />,
+      <EditOutlined key="edit" onClick={() => {
+        navigate(`/blog/update/${props.blogId}`)
+      }} />,
       <EllipsisOutlined key="ellipsis" />,
       <DeleteOutlined key="delete" onClick={async () => {
         await blogApi.deleteBlog({ 'params': { 'blogId': props.blogId } })
@@ -34,6 +38,6 @@ const App: React.FC<BlogItem> = (props) => (
       description={props.description}
     />
   </Card>
-);
+)};
 
 export default App;
