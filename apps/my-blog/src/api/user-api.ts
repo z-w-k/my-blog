@@ -1,31 +1,28 @@
-import { apiClient } from "@/utils/apiClient";
+import { apiClientIns } from "@/utils/apiClient";
 
-export interface User {
-  id: number;
-  name: string;
+/**
+ * UserInfo
+ */
+export interface UserInfo {
   email: string;
+  password: string;
+  username: string;
 }
 
 
 // 在组件中使用
 export const userService = {
   // 获取用户列表
-  getUsers: async (): Promise<User[]> => {
-    return apiClient.get<User[]>('/users');
-  },
+  // getUsers: apiClientIns.createGetApi<void, void, UserInfo[]>('/users'),
 
   // 创建用户
-  createUser: async (userData: CreateUserDto): Promise<User> => {
-    return apiClient.post<User>('/users', userData);
-  },
+  registerUser: apiClientIns.createPostApi<void, UserInfo, void>('/user/register'),
 
   // 更新用户
-  updateUser: async (id: number, userData: Partial<User>): Promise<User> => {
-    return apiClient.put<User>(`/users/${id}`, userData);
-  },
+  resetUser: apiClientIns.createPutApi<void, Omit<UserInfo, 'email'>, void>('/user/reset'),
+
+  login: apiClientIns.createPostApi<void, Omit<UserInfo, 'email'>, void>('/user/login'),
 
   // 删除用户
-  deleteUser: async (id: number): Promise<void> => {
-    return apiClient.delete(`/users/${id}`);
-  },
+  // deleteUser: apiClientIns.createDeleteApi<{ id: number }, void>('/users/:id'),
 };
