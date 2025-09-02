@@ -1,6 +1,11 @@
+import dotenv from 'dotenv'
+import path from 'path';
+const env = process.env.NODE_ENV
+const envPath = path.resolve(__dirname, `../.env.${env}`);
+dotenv.config({path:envPath})
+
 import express from 'express'
-import promisePool from './config/db'
-import userRoutes from './routes/user'
+import userRoutes from './routes/userRoutes'
 
 const app = express()
 const port = 3000

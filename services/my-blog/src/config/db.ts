@@ -3,10 +3,10 @@ import mysql from 'mysql2';
 
 // 创建连接池（推荐使用连接池提高性能）
 const pool = mysql.createPool({
-  host: 'localhost',        // 数据库服务器地址
-  user: 'my_blog',    // 数据库用户名
-  password: 'ASDqwe123',// 数据库密码
-  database: 'my_blog',// 数据库名称
+  host: process.env.DB_HOST,        // 数据库服务器地址
+  user: process.env.DB_USER,    // 数据库用户名
+  password: process.env.DB_PASSWORD,// 数据库密码
+  database: process.env.DB_NAME,// 数据库名称
   waitForConnections: true,
   connectionLimit: 10,      // 连接池最大连接数:cite[1]:cite[3]
   queueLimit: 0

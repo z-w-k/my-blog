@@ -1,6 +1,7 @@
 ## 项目结构
 
-my-blog/
+my_blog/services/my-blog/
+
 ├── src/
 │   ├── controllers/     # 控制器 - 处理请求和响应
 │   ├── services/        # 服务层 - 业务逻辑处理
